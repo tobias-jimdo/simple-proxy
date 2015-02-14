@@ -1,0 +1,22 @@
+<VirtualHost *:{{listen_port}}>
+  ProxyRequests On
+  ProxyVia On
+  SSLProxyEngine On
+
+  <Proxy *>
+    AuthType Basic
+    AuthBasicProvider file
+    AuthName "Password Required"
+    AuthUserFile /etc/apache2/.htpasswd
+    Require valid-user
+  </Proxy>
+
+  <Location />
+    Order allow,deny
+    Deny from all
+  </Location>
+
+  LogLevel warn
+  ErrorLog ${APACHE_LOG_DIR}/proxy-error.log
+  CustomLog ${APACHE_LOG_DIR}/proxy-access.log combined
+</VirtualHost>

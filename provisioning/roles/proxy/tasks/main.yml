@@ -1,0 +1,55 @@
+---
+
+  - name: install apache
+    apt: name=apache2
+
+  - name: enable the proxy module
+    file: state=link src=/etc/apache2/mods-available/proxy.load dest=/etc/apache2/mods-enabled/proxy.load
+    notify:
+     - restart apache
+
+  - name: enable the proxy connect module
+    file: state=link src=/etc/apache2/mods-available/proxy_connect.load dest=/etc/apache2/mods-enabled/proxy_connect.load
+    notify:
+     - restart apache
+
+  - name: enable the http-proxy module
+    file: state=link src=/etc/apache2/mods-available/proxy_http.load dest=/etc/apache2/mods-enabled/proxy_http.load
+    notify:
+     - restart apache
+
+  - name: enable the ssl module
+    file: state=link src=/etc/apache2/mods-available/ssl.load dest=/etc/apache2/mods-enabled/ssl.load
+    notify:
+     - restart apache
+
+  - name: configure listen port
+    copy: content="Listen {{listen_port}}" dest=/etc/apache2/ports.conf
+    notify:
+     - restart apache
+
+  - name: deactivate default site
+    file: path=/etc/apache2/sites-enabled/000-default.conf state=absent
+    notify:
+     - restart apache
+
+  - name: install passlib to generate htpasswd file
+    apt: name=python-passlib
+
+  - name: generate htpasswd file
+    htpasswd: path=/etc/apache2/.htpasswd name={{basic_auth_user}} password={{basic_auth_password}}
+    notify:
+     - restart apache
+
+  - name: add proxy site
+    template: src=proxy.conf.j2 dest=/etc/apache2/sites-available/proxy.conf
+    notify:
+     - restart apache
+
+  - name: activate proxy site
+    file: state=link src=/etc/apache2/sites-available/proxy.conf dest=/etc/apache2/sites-enabled/proxy.conf
+    notify:
+     - restart apache
+
+  - name: run apache
+    service: name=apache2 state=running enabled=yes
