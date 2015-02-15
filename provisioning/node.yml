@@ -1,5 +1,5 @@
 ---
- - hosts: all
+ - hosts: tag_role_nginx-proxy
    sudo: true
    roles:
     - proxy

@@ -1,0 +1,63 @@
+---
+
+ - name: run proxy
+   hosts: localhost
+   gather_facts: false
+   connection: local
+   tasks:
+    - name: setup security group for the proxy
+      ec2_group:
+        name: proxy-access
+        description: Access to the proxy port and SSH
+        region: '{{region}}'
+        rules:
+          - proto: tcp
+            from_port: '{{listen_port}}'
+            to_port: '{{listen_port}}'
+            cidr_ip: 0.0.0.0/0
+          - proto: tcp
+            from_port: 22
+            to_port: 22
+            cidr_ip: 0.0.0.0/0
+        rules_egress:
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: 0.0.0.0/0
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            cidr_ip: 0.0.0.0/0
+
+    - name: lookup the ami id
+      ec2_ami_search: distro=ubuntu release=trusty region='{{region}}' virt=hvm
+      register: ubuntu_image
+
+    - name: start the proxy
+      ec2:
+        instance_tags:
+          role: nginx-proxy
+        exact_count: 1
+        count_tag:
+          role: nginx-proxy
+        key_name: '{{ec2_key_name}}'
+        instance_type: t2.micro
+        image: '{{ ubuntu_image.ami }}'
+        region: '{{ region }}'
+        group: proxy-access
+        wait: True
+      register: ec2
+
+    - name: add new instance to host group
+      add_host: hostname={{ item.public_ip }} groupname=proxies
+      with_items: ec2.instances
+
+    - name: wait for SSH to come up
+      wait_for: host={{ item.public_dns_name }} port=22 delay=60 timeout=320 state=started
+      with_items: ec2.instances
+
+ - hosts: proxies
+   remote_user: ubuntu
+   sudo: true
+   roles:
+    - proxy

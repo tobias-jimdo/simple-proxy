@@ -6,5 +6,9 @@ Vagrant.configure(2) do |config|
   config.vm.provision "ansible" do |ansible|
     ansible.playbook = "provisioning/node.yml"
     ansible.extra_vars = "ansible_extra_vars.yml"
+    ansible.groups = {
+      "tag_role_nginx-proxy" => ["default"],
+      "all_groups:children" => ["tag_role_nginx-proxy"]
+    }
   end
 end
